@@ -233,7 +233,9 @@ export interface Booking extends BaseRecord {
   feeAmount: number;
   receiptCode: string;
   paymentStatus: BookingPaymentStatus;
+  relatedReferral_id?: string | null;
 }
+
 export interface Referral extends BaseRecord {
   patientId: string;
   appointmentId?: string | null;
@@ -376,7 +378,7 @@ export interface AuditLog extends BaseRecord {
 export interface PatientActionLog extends BaseRecord {
   patientId: string;
   patientName: string;
-  action: 'edit' | 'delete';
+  action: "edit" | "delete";
   actorId: string;
   actorName: string;
   summary: string;
