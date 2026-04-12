@@ -1,7 +1,7 @@
-import { getDatabase, createAppointment, listAppointments } from '../../lib/local-db';
+import { createAppointment, deleteAppointmentRecord, getDatabase, listAppointments, updateAppointmentRecord } from '../../lib/local-db';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
 import type { Database } from '../../types/database';
-import type { Appointment, Role } from '../../types/domain';
+import type { Appointment, Patient, Role, Service, UserProfile } from '../../types/domain';
 
 type AppointmentInput = Omit<Appointment, 'id' | 'createdAt' | 'updatedAt'>;
 type AppointmentWithTeleconsult = Appointment & {
@@ -143,7 +143,7 @@ function getDemoPatientByIdentity(userId: string | null, email?: string | null) 
   const database = getDatabase();
 
   if (userId) {
-    const byUserId = database.patients.find((patient) => patient.userId === userId);
+    const byUserId = database.patients.find((patient: Patient) => patient.userId === userId);
     if (byUserId) {
       return byUserId;
     }
@@ -153,7 +153,7 @@ function getDemoPatientByIdentity(userId: string | null, email?: string | null) 
     return null;
   }
 
-  return database.patients.find((patient) => patient.email.toLowerCase() === email.toLowerCase()) ?? null;
+  return database.patients.find((patient: Patient) => patient.email.toLowerCase() === email.toLowerCase()) ?? null;
 }
 
 async function getDoctorIdForProfile(userId: string) {
@@ -222,6 +222,53 @@ export async function createAppointmentLiveOrDemo(input: AppointmentInput) {
   return mapAppointmentRow(data as AppointmentRowLoose);
 }
 
+export async function updateAppointmentLiveOrDemo(appointmentId: string, input: AppointmentInput) {
+  const normalized = normalizeAppointmentInput(input);
+
+  if (!isSupabaseConfigured) {
+    return updateAppointmentRecord(appointmentId, normalized);
+  }
+
+  const client = getClient();
+  const payload = {
+    patient_id: normalized.patientId,
+    doctor_id: normalized.doctorId || null,
+    specialty_id: normalized.specialtyId || null,
+    service_id: normalized.serviceId || null,
+    scheduled_at: normalized.scheduledAt,
+    status: normalized.status,
+    source: normalized.source,
+    visit_type: normalized.visitType,
+    reason: normalized.reason,
+    notes: normalized.notes,
+    teleconsultation_provider: normalized.teleconsultationProvider,
+    teleconsultation_room_name: normalized.teleconsultationRoomName,
+    teleconsultation_platform: normalized.teleconsultationPlatform,
+    teleconsultation_url: normalized.teleconsultationUrl,
+    teleconsultation_access_instructions: normalized.teleconsultationAccessInstructions,
+  };
+
+  const { data, error } = await client.from('appointments').update(payload as never).eq('id', appointmentId).select('*').single();
+  if (error) {
+    throw error;
+  }
+
+  return mapAppointmentRow(data as AppointmentRowLoose);
+}
+
+export async function deleteAppointmentLiveOrDemo(appointmentId: string) {
+  if (!isSupabaseConfigured) {
+    deleteAppointmentRecord(appointmentId);
+    return;
+  }
+
+  const client = getClient();
+  const { error } = await client.from('appointments').update({ deleted_at: new Date().toISOString() } as never).eq('id', appointmentId);
+  if (error) {
+    throw error;
+  }
+}
+
 export async function getTeleconsultAppointmentsForUser(input: {
   userId: string | null;
   email?: string | null;
@@ -251,9 +298,9 @@ export async function getTeleconsultAppointmentsForUser(input: {
       .sort((left, right) => left.scheduledAt.localeCompare(right.scheduledAt));
 
     return appointments.map((appointment) => {
-      const linkedPatient = database.patients.find((item) => item.id === appointment.patientId);
-      const linkedDoctor = database.users.find((item) => item.id === appointment.doctorId);
-      const linkedService = database.services.find((item) => item.id === appointment.serviceId);
+      const linkedPatient = database.patients.find((item: Patient) => item.id === appointment.patientId);
+      const linkedDoctor = database.users.find((item: UserProfile) => item.id === appointment.doctorId);
+      const linkedService = database.services.find((item: Service) => item.id === appointment.serviceId);
 
       return buildTeleconsultSummary(
         appointment,

@@ -97,6 +97,7 @@ export interface UserProfile extends BaseRecord {
   email: string;
   fullName: string;
   role: Role;
+  permissions?: Permission[];
   phone: string;
   specialtyId?: string | null;
   title?: string | null;
@@ -111,6 +112,7 @@ export interface AdminCreateUserInput {
   email: string;
   password: string;
   role: Exclude<Role, "patient">;
+  permissions?: Permission[];
   prcLicenseNumber?: string;
   prcLicenseExpiry?: string;
   birNumber?: string;
@@ -231,9 +233,13 @@ export interface Booking extends BaseRecord {
   feeAmount: number;
   receiptCode: string;
   paymentStatus: BookingPaymentStatus;
+<<<<<<< HEAD
   relatedReferral_id?: string | null;
 }
 
+=======
+}
+>>>>>>> main
 export interface Referral extends BaseRecord {
   patientId: string;
   appointmentId?: string | null;
@@ -371,6 +377,16 @@ export interface AuditLog extends BaseRecord {
   entityType: string;
   entityId: string;
   details: string;
+}
+
+export interface PatientActionLog extends BaseRecord {
+  patientId: string;
+  patientName: string;
+  action: 'edit' | 'delete';
+  actorId: string;
+  actorName: string;
+  summary: string;
+  fields: string[];
 }
 
 export interface AppDatabase {
