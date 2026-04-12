@@ -231,9 +231,7 @@ export interface Booking extends BaseRecord {
   feeAmount: number;
   receiptCode: string;
   paymentStatus: BookingPaymentStatus;
-}
-interface CreateReferralPageProps {
-  referringDoctorId: string;
+  relatedReferral_id?: string | null;
 }
 
 export interface Referral extends BaseRecord {

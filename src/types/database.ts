@@ -31,8 +31,8 @@ export interface Database {
           created_at: string;
           updated_at: string;
         };
-        Insert: Partial<Database['public']['Tables']['clinic_settings']['Row']>;
-        Update: Partial<Database['public']['Tables']['clinic_settings']['Row']>;
+        Insert: Partial<Database["public"]["Tables"]["clinic_settings"]["Row"]>;
+        Update: Partial<Database["public"]["Tables"]["clinic_settings"]["Row"]>;
       };
       profiles: {
         Row: {
@@ -57,7 +57,7 @@ export interface Database {
           updated_at?: string;
           deleted_at?: string | null;
         };
-        Update: Partial<Database['public']['Tables']['profiles']['Insert']>;
+        Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
       };
       specialties: {
         Row: {
@@ -68,8 +68,8 @@ export interface Database {
           updated_at: string;
           deleted_at: string | null;
         };
-        Insert: Partial<Database['public']['Tables']['specialties']['Row']>;
-        Update: Partial<Database['public']['Tables']['specialties']['Row']>;
+        Insert: Partial<Database["public"]["Tables"]["specialties"]["Row"]>;
+        Update: Partial<Database["public"]["Tables"]["specialties"]["Row"]>;
       };
       services: {
         Row: {
@@ -86,8 +86,8 @@ export interface Database {
           updated_at: string;
           deleted_at: string | null;
         };
-        Insert: Partial<Database['public']['Tables']['services']['Row']>;
-        Update: Partial<Database['public']['Tables']['services']['Row']>;
+        Insert: Partial<Database["public"]["Tables"]["services"]["Row"]>;
+        Update: Partial<Database["public"]["Tables"]["services"]["Row"]>;
       };
       doctors: {
         Row: {
@@ -104,8 +104,8 @@ export interface Database {
           updated_at: string;
           deleted_at: string | null;
         };
-        Insert: Partial<Database['public']['Tables']['doctors']['Row']>;
-        Update: Partial<Database['public']['Tables']['doctors']['Row']>;
+        Insert: Partial<Database["public"]["Tables"]["doctors"]["Row"]>;
+        Update: Partial<Database["public"]["Tables"]["doctors"]["Row"]>;
       };
       doctor_availability: {
         Row: {
@@ -118,8 +118,12 @@ export interface Database {
           created_at: string;
           updated_at: string;
         };
-        Insert: Partial<Database['public']['Tables']['doctor_availability']['Row']>;
-        Update: Partial<Database['public']['Tables']['doctor_availability']['Row']>;
+        Insert: Partial<
+          Database["public"]["Tables"]["doctor_availability"]["Row"]
+        >;
+        Update: Partial<
+          Database["public"]["Tables"]["doctor_availability"]["Row"]
+        >;
       };
       patients: {
         Row: {
@@ -162,7 +166,7 @@ export interface Database {
           emergency_contact_name?: string | null;
           emergency_contact_phone?: string | null;
         };
-        Update: Partial<Database['public']['Tables']['patients']['Insert']>;
+        Update: Partial<Database["public"]["Tables"]["patients"]["Insert"]>;
       };
       bookings: {
         Row: {
@@ -172,6 +176,7 @@ export interface Database {
           doctor_id: string | null;
           preferred_date: string;
           preferred_time: string;
+          relatedReferral_id: string | null;
           status: string;
           intake_notes: string;
           fee_type: string;
@@ -195,7 +200,7 @@ export interface Database {
           receipt_code?: string | null;
           payment_status?: string;
         };
-        Update: Partial<Database['public']['Tables']['bookings']['Insert']>;
+        Update: Partial<Database["public"]["Tables"]["bookings"]["Insert"]>;
       };
       referrals: {
         Row: {
@@ -234,7 +239,7 @@ export interface Database {
           specialist_visited_at?: string | null;
           completed_at?: string | null;
         };
-        Update: Partial<Database['public']['Tables']['referrals']['Insert']>;
+        Update: Partial<Database["public"]["Tables"]["referrals"]["Insert"]>;
       };
       appointments: {
         Row: {
@@ -260,8 +265,8 @@ export interface Database {
           updated_at: string;
           deleted_at: string | null;
         };
-        Insert: Partial<Database['public']['Tables']['appointments']['Row']>;
-        Update: Partial<Database['public']['Tables']['appointments']['Row']>;
+        Insert: Partial<Database["public"]["Tables"]["appointments"]["Row"]>;
+        Update: Partial<Database["public"]["Tables"]["appointments"]["Row"]>;
       };
       consultation_types: {
         Row: {
@@ -273,8 +278,12 @@ export interface Database {
           created_at: string;
           updated_at: string;
         };
-        Insert: Partial<Database['public']['Tables']['consultation_types']['Row']>;
-        Update: Partial<Database['public']['Tables']['consultation_types']['Row']>;
+        Insert: Partial<
+          Database["public"]["Tables"]["consultation_types"]["Row"]
+        >;
+        Update: Partial<
+          Database["public"]["Tables"]["consultation_types"]["Row"]
+        >;
       };
       consultations: {
         Row: {
@@ -304,8 +313,8 @@ export interface Database {
           created_at: string;
           updated_at: string;
         };
-        Insert: Partial<Database['public']['Tables']['consultations']['Row']>;
-        Update: Partial<Database['public']['Tables']['consultations']['Row']>;
+        Insert: Partial<Database["public"]["Tables"]["consultations"]["Row"]>;
+        Update: Partial<Database["public"]["Tables"]["consultations"]["Row"]>;
       };
       patient_medical_history_entries: {
         Row: {
@@ -324,8 +333,12 @@ export interface Database {
           created_at: string;
           updated_at: string;
         };
-        Insert: Partial<Database['public']['Tables']['patient_medical_history_entries']['Row']>;
-        Update: Partial<Database['public']['Tables']['patient_medical_history_entries']['Row']>;
+        Insert: Partial<
+          Database["public"]["Tables"]["patient_medical_history_entries"]["Row"]
+        >;
+        Update: Partial<
+          Database["public"]["Tables"]["patient_medical_history_entries"]["Row"]
+        >;
       };
       medical_services_transactions: {
         Row: {
@@ -340,8 +353,12 @@ export interface Database {
           created_at: string;
           updated_at: string;
         };
-        Insert: Partial<Database['public']['Tables']['medical_services_transactions']['Row']>;
-        Update: Partial<Database['public']['Tables']['medical_services_transactions']['Row']>;
+        Insert: Partial<
+          Database["public"]["Tables"]["medical_services_transactions"]["Row"]
+        >;
+        Update: Partial<
+          Database["public"]["Tables"]["medical_services_transactions"]["Row"]
+        >;
       };
       prescriptions: {
         Row: {
@@ -356,13 +373,9 @@ export interface Database {
           created_at: string;
           updated_at: string;
         };
-        Insert: Partial<Database['public']['Tables']['prescriptions']['Row']>;
-        Update: Partial<Database['public']['Tables']['prescriptions']['Row']>;
+        Insert: Partial<Database["public"]["Tables"]["prescriptions"]["Row"]>;
+        Update: Partial<Database["public"]["Tables"]["prescriptions"]["Row"]>;
       };
     };
   };
 }
-
-
-
-
