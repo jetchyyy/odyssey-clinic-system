@@ -881,7 +881,12 @@ export async function updateServiceLiveOrDemo(
     delivery_mode: input.deliveryMode,
   };
 
-  const { data, error } = await client.from("services").update(payload as never).eq("id", id).select("*").single();
+  const { data, error } = await client
+    .from("services")
+    .update(payload as never)
+    .eq("id", id)
+    .select("*")
+    .single();
   if (error) {
     throw error;
   }
@@ -897,7 +902,10 @@ export async function deleteServiceLiveOrDemo(id: string) {
   }
 
   const client = requireSupabase();
-  const { error } = await client.from("services").update({ deleted_at: new Date().toISOString() } as never).eq("id", id);
+  const { error } = await client
+    .from("services")
+    .update({ deleted_at: new Date().toISOString() } as never)
+    .eq("id", id);
   if (error) {
     throw error;
   }
@@ -958,10 +966,15 @@ export async function updateSpecialtyLiveOrDemo(
   }
 
   const client = requireSupabase();
-  const { data, error } = await client.from("specialties").update({
-    name: input.name,
-    description: input.description,
-  } as never).eq("id", id).select("*").single();
+  const { data, error } = await client
+    .from("specialties")
+    .update({
+      name: input.name,
+      description: input.description,
+    } as never)
+    .eq("id", id)
+    .select("*")
+    .single();
   if (error) {
     throw error;
   }
@@ -977,7 +990,10 @@ export async function deleteSpecialtyLiveOrDemo(id: string) {
   }
 
   const client = requireSupabase();
-  const { error } = await client.from("specialties").update({ deleted_at: new Date().toISOString() } as never).eq("id", id);
+  const { error } = await client
+    .from("specialties")
+    .update({ deleted_at: new Date().toISOString() } as never)
+    .eq("id", id);
   if (error) {
     throw error;
   }
@@ -1011,6 +1027,7 @@ export async function getDoctorDirectoryLiveOrDemo(): Promise<
       "id, profile_id, specialty_id, consultation_fee, follow_up_fee, profiles!inner(full_name), specialties(name)",
     )
     .is("deleted_at", null)
+    .eq("profiles.role", "doctor")
     .order("created_at");
 
   if (error) {
