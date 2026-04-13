@@ -20,6 +20,8 @@ export const queryKeys = {
   myBookings: (userId: string | null) => ['my-bookings', userId] as const,
   bookingReceipt: (receiptCode: string | null) => ['booking-receipt', receiptCode] as const,
   referrals: (patientId: string | null) => ['referrals', patientId] as const,
+  chatContacts: (userId: string | null) => ['chat-contacts', userId] as const,
+  chatThreads: (userId: string | null) => ['chat-threads', userId] as const,
   invoices: ['invoices'] as const,
   inventory: ['inventory'] as const,
   laboratory: ['laboratory'] as const,
