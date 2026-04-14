@@ -12,21 +12,25 @@ import { ResetPasswordPage } from "../features/auth/reset-password-page";
 import { BillingPage } from "../features/billing/billing-page";
 import { BookingReceiptScanPage } from "../features/booking/booking-receipt-scan-page";
 import { MyBookingsPage } from "../features/booking/my-bookings-page";
+import { ReferralPage } from "../features/referrals/referral-frontdesk-page";
 import { PatientProfilePage } from "../features/booking/patient-profile-page";
 import { PortalBookPage } from "../features/booking/portal-book-page";
 import { PortalHomePage } from "../features/booking/portal-home-page";
 import { ConsultationEntryPage } from "../features/consultation/consultation-entry-page";
 import { DashboardPage } from "../features/dashboard/dashboard-page";
 import { DoctorAvailabilityPage } from "../features/doctor/doctor-availability-page";
+import { SpecialistReferralsPage } from "../features/referrals/specialist-referrals-page";
 import { InventoryPage } from "../features/inventory/inventory-page";
 import { LaboratoryPage } from "../features/laboratory/laboratory-page";
 import { PatientDetailPage } from "../features/patients/patient-detail-page";
 import { PatientActionLogsPage } from "../features/patients/patient-action-logs-page";
 import { PatientQrLookupPage } from "../features/patients/patient-qr-lookup-page";
 import { PatientsPage } from "../features/patients/patients-page";
+import { StaffProfilePage } from "../features/staff/staff-profile-page";
 import { SettingsClinicPage } from "../features/settings/settings-clinic-page";
 import { SettingsServicesPage } from "../features/settings/settings-services-page";
 import { SettingsSupportPage } from "../features/settings/settings-support-page";
+import { SettingsRolesPage } from "../features/settings/settings-roles-page";
 import { SettingsUsersPage } from "../features/settings/settings-users-page";
 import { NotFoundPage } from "../features/shared/not-found-page";
 import { OdcPage } from "../features/shared/odc-page";
@@ -128,6 +132,7 @@ export const router = createBrowserRouter([
                 element: <PermissionGate permission="appointments.view" />,
                 children: [
                   { path: "appointments", element: <AppointmentsPage /> },
+                  { path: "referrals", element: <ReferralPage /> },
                   { path: "consultations", element: <AppointmentsPage /> },
                   {
                     path: "teleconsult/:appointmentId",
@@ -141,6 +146,10 @@ export const router = createBrowserRouter([
                   {
                     path: "doctor-availability",
                     element: <DoctorAvailabilityPage />,
+                  },
+                  {
+                    path: "specialist-referrals",
+                    element: <SpecialistReferralsPage />,
                   },
                 ],
               },
@@ -174,6 +183,7 @@ export const router = createBrowserRouter([
                 element: <PermissionGate permission="laboratory.view" />,
                 children: [{ path: "laboratory", element: <LaboratoryPage /> }],
               },
+              { path: "profile", element: <StaffProfilePage /> },
               {
                 path: "settings",
                 element: <SettingsLayout />,
@@ -181,6 +191,7 @@ export const router = createBrowserRouter([
               },
               { path: "settings/catalog", element: <SettingsServicesPage /> },
               { path: "settings/users", element: <SettingsUsersPage /> },
+              { path: "settings/roles", element: <SettingsRolesPage /> },
               { path: "settings/support", element: <SettingsSupportPage /> },
             ],
           },

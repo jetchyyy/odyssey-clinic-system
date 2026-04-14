@@ -38,8 +38,20 @@ export function useCreateReferral(patientId: string | null) {
         specialistScheduleId: null,
       }),
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['referrals'] });
       void queryClient.invalidateQueries({ queryKey: queryKeys.referrals(patientId) });
     },
+  });
+}
+
+export function useSpecialistReferrals(doctorId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.specialistReferrals(doctorId),
+    queryFn: async () => {
+      if (!doctorId) return [];
+      return listReferralsByTargetDoctor(doctorId);
+    },
+    enabled: Boolean(doctorId),
   });
 }
 
@@ -52,6 +64,22 @@ export function useUpdateReferralOutcome(patientId: string | null) {
       specialistRecommendations: string;
       specialistVisitedAt: string | null;
     }) => referralService.updateOutcome(payload),
+<<<<<<< HEAD
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.referrals(patientId) });
+    },
+  });
+}
+
+export function useUpdateReferralStatus(patientId: string | null) {
+  return useMutation({
+    mutationFn: async (payload: {
+      referralId: string;
+      status: 'confirmed' | 'cancelled' | 'declined';
+      referralNotes: string;
+    }) => referralService.updateStatus(payload),
+=======
+>>>>>>> b193f061b07cca71743f9aa59aed3c30819a33e1
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.referrals(patientId) });
     },
@@ -66,6 +94,7 @@ export function useUpdateReferralStatus(patientId: string | null) {
       referralNotes: string;
     }) => referralService.updateStatus(payload),
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['referrals'] });
       void queryClient.invalidateQueries({ queryKey: queryKeys.referrals(patientId) });
     },
   });

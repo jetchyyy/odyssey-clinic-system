@@ -101,11 +101,21 @@ export interface UserProfile extends BaseRecord {
   fullName: string;
   role: Role;
   permissions?: Permission[];
+  accessRoleId?: string | null;
+  accessRoleName?: string | null;
   phone: string;
   specialtyId?: string | null;
   title?: string | null;
   consultationFee?: number | null;
   followUpFee?: number | null;
+}
+
+export interface AccessRoleTemplate extends BaseRecord {
+  name: string;
+  description: string;
+  baseRole: Exclude<Role, 'patient'>;
+  permissions: Permission[];
+  isSystem?: boolean;
 }
 
 export interface AdminCreateUserInput {
@@ -236,7 +246,9 @@ export interface Booking extends BaseRecord {
   feeAmount: number;
   receiptCode: string;
   paymentStatus: BookingPaymentStatus;
+  relatedReferral_id?: string | null;
 }
+
 export interface Referral extends BaseRecord {
   patientId: string;
   appointmentId?: string | null;
@@ -281,7 +293,7 @@ export interface Payment extends BaseRecord {
 
 export interface Supplier extends BaseRecord {
   name: string;
-  contactPerson: string;
+  contact_person: string;
   phone: string;
   email: string;
 }
@@ -291,8 +303,8 @@ export interface InventoryCategory extends BaseRecord {
 }
 
 export interface InventoryItem extends BaseRecord {
-  categoryId: string;
-  supplierId?: string | null;
+  category_id: string;
+  supplier_id?: string | null;
   qrCode: string;
   name: string;
   sku: string;
@@ -379,7 +391,7 @@ export interface AuditLog extends BaseRecord {
 export interface PatientActionLog extends BaseRecord {
   patientId: string;
   patientName: string;
-  action: 'edit' | 'delete';
+  action: "edit" | "delete";
   actorId: string;
   actorName: string;
   summary: string;

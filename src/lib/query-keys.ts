@@ -9,6 +9,7 @@ export const queryKeys = {
   currentProfile: (userId: string | null) => ['current-profile', userId] as const,
   currentPatient: (userId: string | null) => ['current-patient', userId] as const,
   users: ['users'] as const,
+  accessRoles: ['access-roles'] as const,
   patients: ['patients'] as const,
   patientActionLogs: ['patient-action-logs'] as const,
   patientDetail: (patientId: string | null) => ['patient-detail', patientId] as const,
