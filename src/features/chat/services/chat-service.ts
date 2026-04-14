@@ -5,7 +5,7 @@ export interface ChatContact {
   id: string;
   fullName: string;
   role: 'patient' | 'specialist';
-  source: 'appointment' | 'referral';
+  source: 'appointment' | 'booking' | 'referral';
 }
 
 export interface DirectThread {
@@ -83,6 +83,23 @@ export const chatService = {
         })
         .filter(isDefined);
 
+      const bookingContacts = database.bookings
+        .filter((booking) => booking.doctorId === doctor.id && booking.status !== 'cancelled')
+        .map((booking) => {
+          const patient = database.patients.find((item) => item.id === booking.patientId);
+          if (!patient) {
+            return null;
+          }
+
+          return {
+            id: patient.userId ?? patient.id,
+            fullName: `${patient.firstName} ${patient.lastName}`,
+            role: 'patient' as const,
+            source: 'booking' as const,
+          };
+        })
+        .filter(isDefined);
+
       const referralContacts = database.referrals
         .filter((referral) => {
           if (!['accepted', 'completed'].includes(referral.status)) {
@@ -107,7 +124,7 @@ export const chatService = {
         })
         .filter(isDefined);
 
-      return dedupeContacts([...appointmentContacts, ...referralContacts]);
+      return dedupeContacts([...appointmentContacts, ...bookingContacts, ...referralContacts]);
     }
 
     const client = requireSupabaseClient();
@@ -126,7 +143,20 @@ export const chatService = {
       throw appointmentError;
     }
 
-    const patientIds = [...new Set(((appointmentRows ?? []) as Array<{ patient_id: string | null }>).map((row) => row.patient_id).filter(Boolean))] as string[];
+    const { data: bookingRows, error: bookingError } = await client
+      .from('bookings')
+      .select('patient_id')
+      .eq('doctor_id', doctorId)
+      .neq('status', 'cancelled');
+
+    if (bookingError) {
+      throw bookingError;
+    }
+
+    const patientIds = [...new Set([
+      ...((appointmentRows ?? []) as Array<{ patient_id: string | null }>).map((row) => row.patient_id),
+      ...((bookingRows ?? []) as Array<{ patient_id: string | null }>).map((row) => row.patient_id),
+    ].filter(Boolean))] as string[];
 
     const { data: patientRows, error: patientError } = patientIds.length
       ? await client.from('patients').select('id, user_id, first_name, last_name').in('id', patientIds)
@@ -136,11 +166,19 @@ export const chatService = {
       throw patientError;
     }
 
-    const appointmentContacts = ((patientRows ?? []) as Array<{ id: string; user_id: string | null; first_name: string; last_name: string }>).map((patient) => ({
+    const appointmentPatientIds = new Set(
+      ((appointmentRows ?? []) as Array<{ patient_id: string | null }>).map((row) => row.patient_id).filter(Boolean),
+    );
+
+    const bookingPatientIds = new Set(
+      ((bookingRows ?? []) as Array<{ patient_id: string | null }>).map((row) => row.patient_id).filter(Boolean),
+    );
+
+    const patientContacts = ((patientRows ?? []) as Array<{ id: string; user_id: string | null; first_name: string; last_name: string }>).map((patient) => ({
       id: patient.user_id ?? patient.id,
       fullName: `${patient.first_name} ${patient.last_name}`,
       role: 'patient' as const,
-      source: 'appointment' as const,
+      source: appointmentPatientIds.has(patient.id) ? 'appointment' as const : bookingPatientIds.has(patient.id) ? 'booking' as const : 'appointment' as const,
     }));
 
     const { data: referralRows, error: referralError } = await client
@@ -201,7 +239,7 @@ export const chatService = {
       source: 'referral' as const,
     }));
 
-    return dedupeContacts([...appointmentContacts, ...referralContacts]);
+    return dedupeContacts([...patientContacts, ...referralContacts]);
   },
 
   async openOrCreateThread(input: {

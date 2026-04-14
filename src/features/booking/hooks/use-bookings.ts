@@ -109,6 +109,7 @@ export function useCreateBooking(userId: string | null) {
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.bookings });
+      void queryClient.invalidateQueries({ queryKey: ['chat-contacts'] });
       void queryClient.invalidateQueries({
         queryKey: queryKeys.myBookings(userId),
       });

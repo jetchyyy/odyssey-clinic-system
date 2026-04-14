@@ -19,6 +19,7 @@ import { isSupabaseConfigured, supabase } from "./supabase";
 import type {
   AdminCreateUserInput,
   Appointment,
+  Booking,
   ClinicSettings,
   Consultation,
   DoctorAvailability,
@@ -357,6 +358,46 @@ function mapAppointmentStatus(value: string) {
   }
 }
 
+function mapBookingStatus(value: string) {
+  switch (value) {
+    case "pending":
+    case "confirmed":
+    case "rescheduled":
+    case "cancelled":
+      return value;
+    default:
+      return "pending" as const;
+  }
+}
+
+function mapBooking(row: BookingRow): Booking {
+  return {
+    id: row.id,
+    patientId: row.patient_id,
+    serviceId: row.service_id,
+    doctorId: row.doctor_id ?? "",
+    preferredDate: row.preferred_date,
+    preferredTime: row.preferred_time,
+    status: mapBookingStatus(row.status),
+    intakeNotes: row.intake_notes,
+    feeType: mapBookingFeeType(row.fee_type),
+    feeAmount: Number(row.fee_amount ?? 0),
+    receiptCode: row.receipt_code ?? "",
+    paymentStatus: mapBookingPaymentStatus(row.payment_status),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    deletedAt: row.deleted_at,
+  };
+}
+
+function hasConsultationBooking(status: string | null | undefined) {
+  return status !== "cancelled";
+}
+
+function hasConsultationAppointment(status: string | null | undefined) {
+  return status !== "cancelled" && status !== "no_show";
+}
+
 function mapServiceType(value: string | null | undefined): ServiceType {
   switch (value) {
     case "consultation":
@@ -454,20 +495,76 @@ function mapDoctorAvailability(row: DoctorAvailabilityRow): DoctorAvailability {
 
 export async function listPatientsLiveOrDemo() {
   if (!isSupabaseConfigured) {
-    return getDatabase().patients;
+    const database = getDatabase();
+    const patientIdsWithAppointment = new Set(
+      database.appointments
+        .filter((appointment) => hasConsultationAppointment(appointment.status))
+        .map((appointment) => appointment.patientId),
+    );
+    const patientIdsWithBooking = new Set(
+      database.bookings
+        .filter((booking) => hasConsultationBooking(booking.status))
+        .map((booking) => booking.patientId),
+    );
+
+    return database.patients.map((patient) => ({
+      ...patient,
+      visitStatus:
+        patient.visitStatus === "visited_clinic" ||
+        patientIdsWithAppointment.has(patient.id) ||
+        patientIdsWithBooking.has(patient.id)
+          ? ("visited_clinic" as const)
+          : ("registered_no_visit" as const),
+    }));
   }
 
   const client = requireSupabase();
-  const { data, error } = await client
-    .from("patients")
-    .select("*")
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false });
+  const [patientResult, appointmentResult, bookingResult] = await Promise.all([
+    client
+      .from("patients")
+      .select("*")
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false }),
+    client.from("appointments").select("patient_id,status").is("deleted_at", null),
+    client.from("bookings").select("patient_id,status").is("deleted_at", null),
+  ]);
+
+  const { data, error } = patientResult;
   if (error) {
     throw error;
   }
 
-  return (data ?? []).map(mapPatient);
+  if (appointmentResult.error) {
+    throw appointmentResult.error;
+  }
+
+  if (bookingResult.error) {
+    throw bookingResult.error;
+  }
+
+  const patientIdsWithAppointment = new Set(
+    ((appointmentResult.data ?? []) as Array<{ patient_id: string | null; status: string | null }>)
+      .filter((appointment) => Boolean(appointment.patient_id) && hasConsultationAppointment(appointment.status))
+      .map((appointment) => appointment.patient_id as string),
+  );
+  const patientIdsWithBooking = new Set(
+    ((bookingResult.data ?? []) as Array<{ patient_id: string | null; status: string | null }>)
+      .filter((booking) => Boolean(booking.patient_id) && hasConsultationBooking(booking.status))
+      .map((booking) => booking.patient_id as string),
+  );
+
+  return (data ?? []).map((row) => {
+    const patient = mapPatient(row);
+    return {
+      ...patient,
+      visitStatus:
+        patient.visitStatus === "visited_clinic" ||
+        patientIdsWithAppointment.has(patient.id) ||
+        patientIdsWithBooking.has(patient.id)
+          ? ("visited_clinic" as const)
+          : ("registered_no_visit" as const),
+    };
+  });
 }
 
 export async function createPatientLiveOrDemo(
@@ -609,6 +706,35 @@ export async function listAppointmentsByPatientIdLiveOrDemo(
   }
 
   return ((data ?? []) as AppointmentRow[]).map(mapAppointment);
+}
+
+export async function listBookingsByPatientIdLiveOrDemo(
+  patientId: string,
+): Promise<Booking[]> {
+  if (!isSupabaseConfigured) {
+    return getDatabase().bookings
+      .filter((booking) => booking.patientId === patientId)
+      .sort((left, right) => {
+        const leftDateTime = `${left.preferredDate}T${left.preferredTime}`;
+        const rightDateTime = `${right.preferredDate}T${right.preferredTime}`;
+        return rightDateTime.localeCompare(leftDateTime);
+      });
+  }
+
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from("bookings")
+    .select("*")
+    .eq("patient_id", patientId)
+    .is("deleted_at", null)
+    .order("preferred_date", { ascending: false })
+    .order("preferred_time", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return ((data ?? []) as BookingRow[]).map(mapBooking);
 }
 
 export async function listConsultationsByPatientIdLiveOrDemo(
@@ -1377,6 +1503,263 @@ export async function getPatientByQrCodeLiveOrDemo(qrCode: string) {
   }
 
   return data ? mapPatient(data) : null;
+}
+
+function appendIntakeNotesToAppointmentNotes(
+  existingNotes: string,
+  intakeNotes: string,
+) {
+  const trimmedIntake = intakeNotes.trim();
+  if (!trimmedIntake) {
+    return existingNotes;
+  }
+
+  if (existingNotes.includes(trimmedIntake)) {
+    return existingNotes;
+  }
+
+  const normalizedExisting = existingNotes.trim();
+  if (!normalizedExisting) {
+    return `Intake Notes: ${trimmedIntake}`;
+  }
+
+  return `${normalizedExisting}\n\nIntake Notes: ${trimmedIntake}`;
+}
+
+export interface PatientQrConsultationValidationResult {
+  patient: Patient;
+  latestInvoicePaymentStatus: string | null;
+  appointmentId: string | null;
+  isAllowed: boolean;
+  gateReason: "paid" | "unpaid" | "missing_invoice";
+  gateMessage: string;
+}
+
+export async function validatePatientQrConsultationAccessLiveOrDemo(
+  qrCode: string,
+): Promise<PatientQrConsultationValidationResult | null> {
+  const patient = await getPatientByQrCodeLiveOrDemo(qrCode);
+  if (!patient) {
+    return null;
+  }
+
+  if (!isSupabaseConfigured) {
+    const { listInvoices, listBookings, updateAppointmentRecord } =
+      await import("./local-db");
+    const database = getDatabase();
+
+    const latestInvoice = listInvoices()
+      .filter((invoice) => invoice.patientId === patient.id)
+      .sort((left, right) => {
+        const byCreatedAt = right.createdAt.localeCompare(left.createdAt);
+        if (byCreatedAt !== 0) {
+          return byCreatedAt;
+        }
+
+        return right.invoiceNumber.localeCompare(left.invoiceNumber);
+      })[0];
+
+    const latestInvoicePaymentStatus = latestInvoice?.paymentStatus ?? null;
+    if (latestInvoicePaymentStatus !== "paid") {
+      const isMissingInvoice = latestInvoicePaymentStatus === null;
+      return {
+        patient,
+        latestInvoicePaymentStatus,
+        appointmentId: null,
+        isAllowed: false,
+        gateReason: isMissingInvoice ? "missing_invoice" : "unpaid",
+        gateMessage: isMissingInvoice
+          ? "No billing record found for this patient yet. Please complete cashier processing before consultation."
+          : "Unpaid Balance: latest invoice is not marked as paid. Consultation cannot proceed.",
+      };
+    }
+
+    const latestAppointment = database.appointments
+      .filter((appointment) => appointment.patientId === patient.id)
+      .sort((left, right) => right.scheduledAt.localeCompare(left.scheduledAt))[0];
+
+    const latestBooking = listBookings()
+      .filter(
+        (booking) =>
+          booking.patientId === patient.id && booking.status !== "cancelled",
+      )
+      .sort((left, right) => {
+        const leftDateTime = `${left.preferredDate}T${left.preferredTime}`;
+        const rightDateTime = `${right.preferredDate}T${right.preferredTime}`;
+        return rightDateTime.localeCompare(leftDateTime);
+      })[0];
+
+    if (latestAppointment) {
+      const nextNotes = appendIntakeNotesToAppointmentNotes(
+        latestAppointment.notes,
+        latestBooking?.intakeNotes ?? "",
+      );
+
+      updateAppointmentRecord(latestAppointment.id, {
+        ...latestAppointment,
+        status: "confirmed",
+        notes: nextNotes,
+      });
+    }
+
+    return {
+      patient,
+      latestInvoicePaymentStatus,
+      appointmentId: latestAppointment?.id ?? null,
+      isAllowed: true,
+      gateReason: "paid",
+      gateMessage:
+        "Payment verified. Appointment status confirmed and intake notes synced.",
+    };
+  }
+
+  const client = requireSupabase();
+  const { data: invoiceRow, error: invoiceError } = await (client as any)
+    .from("invoices")
+    .select("id, appointment_id, payment_status, created_at, invoice_number")
+    .eq("patient_id", patient.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (invoiceError) {
+    throw invoiceError;
+  }
+
+  const latestInvoice = invoiceRow as {
+    appointment_id: string | null;
+    payment_status: string;
+  } | null;
+  const latestInvoicePaymentStatus = latestInvoice?.payment_status ?? null;
+
+  if (latestInvoicePaymentStatus !== "paid") {
+    const isMissingInvoice = latestInvoicePaymentStatus === null;
+    return {
+      patient,
+      latestInvoicePaymentStatus,
+      appointmentId: null,
+      isAllowed: false,
+      gateReason: isMissingInvoice ? "missing_invoice" : "unpaid",
+      gateMessage: isMissingInvoice
+        ? "No billing record found for this patient yet. Please complete cashier processing before consultation."
+        : "Unpaid Balance: latest invoice is not marked as paid. Consultation cannot proceed.",
+    };
+  }
+
+  const invoiceAppointmentId = latestInvoice?.appointment_id ?? null;
+
+  let targetAppointment:
+    | {
+        id: string;
+        notes: string;
+        booking_id: string | null;
+      }
+    | null = null;
+
+  if (invoiceAppointmentId) {
+    const { data: invoiceLinkedAppointment, error: invoiceAppointmentError } =
+      await client
+        .from("appointments")
+        .select("id, notes, booking_id")
+        .eq("id", invoiceAppointmentId)
+        .maybeSingle();
+
+    if (invoiceAppointmentError) {
+      throw invoiceAppointmentError;
+    }
+
+    targetAppointment =
+      (invoiceLinkedAppointment as {
+        id: string;
+        notes: string;
+        booking_id: string | null;
+      } | null) ?? null;
+  }
+
+  if (!targetAppointment) {
+    const { data: latestAppointmentRow, error: latestAppointmentError } =
+      await client
+        .from("appointments")
+        .select("id, notes, booking_id")
+        .eq("patient_id", patient.id)
+        .is("deleted_at", null)
+        .order("scheduled_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (latestAppointmentError) {
+      throw latestAppointmentError;
+    }
+
+    targetAppointment =
+      (latestAppointmentRow as {
+        id: string;
+        notes: string;
+        booking_id: string | null;
+      } | null) ?? null;
+  }
+
+  if (targetAppointment) {
+    let intakeNotes = "";
+
+    if (targetAppointment.booking_id) {
+      const { data: bookingRow, error: bookingError } = await client
+        .from("bookings")
+        .select("intake_notes")
+        .eq("id", targetAppointment.booking_id)
+        .maybeSingle();
+
+      if (bookingError) {
+        throw bookingError;
+      }
+
+      intakeNotes =
+        ((bookingRow as { intake_notes: string } | null)?.intake_notes ?? "").trim();
+    }
+
+    if (!intakeNotes) {
+      const { data: latestBookingRow, error: latestBookingError } = await client
+        .from("bookings")
+        .select("intake_notes")
+        .eq("patient_id", patient.id)
+        .neq("status", "cancelled")
+        .order("preferred_date", { ascending: false })
+        .order("preferred_time", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (latestBookingError) {
+        throw latestBookingError;
+      }
+
+      intakeNotes =
+        ((latestBookingRow as { intake_notes: string } | null)?.intake_notes ?? "").trim();
+    }
+
+    const nextNotes = appendIntakeNotesToAppointmentNotes(
+      targetAppointment.notes ?? "",
+      intakeNotes,
+    );
+
+    const { error: appointmentUpdateError } = await client
+      .from("appointments")
+      .update({ status: "confirmed", notes: nextNotes } as never)
+      .eq("id", targetAppointment.id);
+
+    if (appointmentUpdateError) {
+      throw appointmentUpdateError;
+    }
+  }
+
+  return {
+    patient,
+    latestInvoicePaymentStatus,
+    appointmentId: targetAppointment?.id ?? null,
+    isAllowed: true,
+    gateReason: "paid",
+    gateMessage:
+      "Payment verified. Appointment status confirmed and intake notes synced.",
+  };
 }
 
 export async function ensurePatientForUser(user: User) {

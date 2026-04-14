@@ -1,12 +1,12 @@
-import { Camera, QrCode, Search, StopCircle } from 'lucide-react';
+import { AlertTriangle, Camera, Loader2, QrCode, Search, StopCircle } from 'lucide-react';
 import jsQR from 'jsqr';
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { Button } from '../../components/ui/button';
 import { Card, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
-import { getPatientByQrCodeLiveOrDemo } from '../../lib/supabase-clinic';
+import { validatePatientQrConsultationAccessLiveOrDemo } from '../../lib/supabase-clinic';
 import { extractPatientQrCode } from './patient-qr';
 
 function readQrFromVideoFrame(video: HTMLVideoElement, canvas: HTMLCanvasElement) {
@@ -36,6 +36,9 @@ export function PatientQrLookupPage() {
   const initialQuery = searchParams.get('qr') ?? '';
   const [value, setValue] = useState(initialQuery);
   const [error, setError] = useState('');
+  const [statusMessage, setStatusMessage] = useState('');
+  const [isResolving, setIsResolving] = useState(false);
+  const [isAccessBlocked, setIsAccessBlocked] = useState(false);
   const [cameraState, setCameraState] = useState<'idle' | 'requesting' | 'active' | 'unsupported' | 'denied'>('idle');
   const [cameraMessage, setCameraMessage] = useState('');
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -43,6 +46,52 @@ export function PatientQrLookupPage() {
   const streamRef = useRef<MediaStream | null>(null);
 
   const normalizedCode = useMemo(() => extractPatientQrCode(value), [value]);
+
+  const resolvePatientConsultationAccess = useCallback(async (rawQrValue: string) => {
+    if (isResolving) {
+      return;
+    }
+
+    setIsResolving(true);
+    setError('');
+    setStatusMessage('Validating patient and latest payment status...');
+    setIsAccessBlocked(false);
+
+    try {
+      const validation = await validatePatientQrConsultationAccessLiveOrDemo(extractPatientQrCode(rawQrValue));
+
+      if (!validation) {
+        setStatusMessage('');
+        setError('That QR code is not linked to a patient record yet.');
+        setIsAccessBlocked(false);
+        return;
+      }
+
+      if (!validation.isAllowed) {
+        setStatusMessage('Consultation access is blocked for this scan.');
+        setError(validation.gateMessage);
+        setIsAccessBlocked(true);
+        return;
+      }
+
+      setStatusMessage(validation.gateMessage);
+      setIsAccessBlocked(false);
+      const destination = validation.appointmentId
+        ? `/app/consultation/${validation.patient.id}?source=qr&appointmentId=${encodeURIComponent(validation.appointmentId)}`
+        : `/app/consultation/${validation.patient.id}?source=qr`;
+      void navigate(destination, { replace: true });
+    } catch (resolveError) {
+      setStatusMessage('');
+      setIsAccessBlocked(false);
+      setError(
+        resolveError instanceof Error
+          ? `Unable to validate payment status right now. ${resolveError.message}`
+          : 'Unable to validate payment status right now. Please try again.',
+      );
+    } finally {
+      setIsResolving(false);
+    }
+  }, [isResolving, navigate]);
 
   const stopCamera = () => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
@@ -60,16 +109,8 @@ export function PatientQrLookupPage() {
       return;
     }
 
-    void (async () => {
-      const patient = await getPatientByQrCodeLiveOrDemo(extractPatientQrCode(initialQuery));
-      if (patient) {
-        void navigate(`/app/patients/${patient.id}?source=qr`, { replace: true });
-        return;
-      }
-
-      setError('That QR code is not linked to a patient record yet.');
-    })();
-  }, [initialQuery, navigate]);
+    void resolvePatientConsultationAccess(initialQuery);
+  }, [initialQuery, resolvePatientConsultationAccess]);
 
   useEffect(
     () => () => {
@@ -79,7 +120,7 @@ export function PatientQrLookupPage() {
   );
 
   useEffect(() => {
-    if (cameraState !== 'active' || !videoRef.current || !canvasRef.current) {
+    if (cameraState !== 'active' || !videoRef.current || !canvasRef.current || isResolving) {
       return;
     }
 
@@ -94,18 +135,13 @@ export function PatientQrLookupPage() {
         const rawValue = readQrFromVideoFrame(videoRef.current, canvasRef.current);
         const code = extractPatientQrCode(rawValue);
         if (code) {
+          stopCamera();
           setValue(rawValue);
-          const patient = await getPatientByQrCodeLiveOrDemo(code);
-          if (patient) {
-            stopCamera();
-            void navigate(`/app/patients/${patient.id}?source=qr`);
-            return;
-          }
-
-          setError('That QR code is not linked to a patient record yet.');
+          await resolvePatientConsultationAccess(rawValue);
+          return;
         }
       } catch {
-        setCameraMessage('Camera is active. Align the patient QR inside the frame.');
+        setCameraMessage('Camera is active. Align the patient QR inside the frame and keep it steady.');
       }
 
       window.setTimeout(scanFrame, 450);
@@ -116,7 +152,7 @@ export function PatientQrLookupPage() {
     return () => {
       cancelled = true;
     };
-  }, [cameraState, navigate]);
+  }, [cameraState, isResolving, resolvePatientConsultationAccess]);
 
   useEffect(() => {
     if (cameraState !== 'requesting' && cameraState !== 'active') {
@@ -144,6 +180,8 @@ export function PatientQrLookupPage() {
 
     stopCamera();
     setError('');
+    setStatusMessage('');
+    setIsAccessBlocked(false);
     setCameraState('requesting');
     setCameraMessage('Requesting camera permission...');
 
@@ -170,14 +208,7 @@ export function PatientQrLookupPage() {
       return;
     }
 
-    const patient = await getPatientByQrCodeLiveOrDemo(normalizedCode);
-    if (!patient) {
-      setError('That QR code is not linked to a patient record yet.');
-      return;
-    }
-
-    setError('');
-    void navigate(`/app/patients/${patient.id}?source=qr`);
+    await resolvePatientConsultationAccess(normalizedCode);
   };
 
   return (
@@ -186,18 +217,18 @@ export function PatientQrLookupPage() {
         <p className="text-sm uppercase tracking-[0.18em] text-slate-400">QR lookup</p>
         <CardTitle className="mt-2 text-3xl">Scan patient QR for consultation entry</CardTitle>
         <p className="mt-3 max-w-2xl text-sm text-slate-500">
-          Doctors can allow camera access, scan the patient QR, and jump straight into the patient chart to record consultation details.
+          Doctors can allow camera access, scan the patient QR, validate payment status, and continue straight to SOAP documentation.
         </p>
 
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-3 rounded-3xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex flex-wrap gap-3">
-              <Button className="gap-2" onClick={() => void startCamera()} type="button">
+              <Button className="gap-2" disabled={isResolving} onClick={() => void startCamera()} type="button">
                 <Camera className="size-4" />
                 {cameraState === 'active' ? 'Restart camera' : 'Allow camera and scan'}
               </Button>
               {cameraState === 'active' ? (
-                <Button className="gap-2" onClick={stopCamera} type="button" variant="secondary">
+                <Button className="gap-2" disabled={isResolving} onClick={stopCamera} type="button" variant="secondary">
                   <StopCircle className="size-4" />
                   Stop camera
                 </Button>
@@ -225,12 +256,44 @@ export function PatientQrLookupPage() {
             </div>
           </label>
 
+          {statusMessage ? (
+            <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">{statusMessage}</div>
+          ) : null}
+
           {error ? <p className="text-sm text-rose-600">{error}</p> : null}
 
+          {isAccessBlocked ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+                <AlertTriangle className="size-4" />
+                Consultation blocked until payment is settled.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Link
+                  className="inline-flex items-center justify-center rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-wider text-amber-800 transition hover:bg-amber-100"
+                  to="/app/billing"
+                >
+                  Open Billing
+                </Link>
+                <button
+                  className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-700 transition hover:bg-slate-50"
+                  onClick={() => {
+                    setError('');
+                    setStatusMessage('');
+                    setIsAccessBlocked(false);
+                  }}
+                  type="button"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           <div className="flex flex-wrap gap-3">
-            <Button className="gap-2" type="submit">
-              <Search className="size-4" />
-              Open patient details
+            <Button className="gap-2" disabled={isResolving} type="submit">
+              {isResolving ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}
+              {isResolving ? 'Validating...' : 'Validate and open SOAP'}
             </Button>
             <Link
               className="inline-flex items-center justify-center rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
@@ -247,8 +310,8 @@ export function PatientQrLookupPage() {
         <CardTitle className="mt-2 text-white">Doctor scanning workflow</CardTitle>
         <div className="mt-5 space-y-4 text-sm text-slate-300">
           <p>The page asks for camera permission before opening the live scanner.</p>
-          <p>Once the patient QR is detected, the app opens the patient details page automatically.</p>
-          <p>From the patient details page, use Start Consultation to continue with SOAP notes and prescriptions.</p>
+          <p>After scanning, the app checks the patient&apos;s latest invoice payment status.</p>
+          <p>If paid, the appointment is confirmed and you are redirected to the SOAP interface automatically.</p>
         </div>
       </Card>
     </div>

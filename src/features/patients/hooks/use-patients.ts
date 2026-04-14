@@ -9,6 +9,7 @@ import {
   deletePatientLiveOrDemo,
   getPatientByIdLiveOrDemo,
   listAppointmentsByPatientIdLiveOrDemo,
+  listBookingsByPatientIdLiveOrDemo,
   updatePatientLiveOrDemo,
   listConsultationsByPatientIdLiveOrDemo,
   listPatientsLiveOrDemo,
@@ -78,6 +79,7 @@ export function useCreateConsultation() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.patientConsultations(variables.patientId) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.patientPrescriptions(variables.patientId) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.patientAppointments(variables.patientId) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.patientBookings(variables.patientId) });
     },
   });
 }
@@ -119,6 +121,17 @@ export function usePatientAppointments(patientId: string | null) {
     queryFn: async () => {
       if (!patientId) return [];
       return listAppointmentsByPatientIdLiveOrDemo(patientId);
+    },
+    enabled: Boolean(patientId),
+  });
+}
+
+export function usePatientBookings(patientId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.patientBookings(patientId),
+    queryFn: async () => {
+      if (!patientId) return [];
+      return listBookingsByPatientIdLiveOrDemo(patientId);
     },
     enabled: Boolean(patientId),
   });

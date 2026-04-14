@@ -22,6 +22,7 @@ import { PatientQrCard } from './components/patient-qr-card';
 import {
   useCreatePrescription,
   usePatientAppointments,
+  usePatientBookings,
   usePatientConsultations,
   usePatientDetail,
   usePatientPrescriptions,
@@ -76,6 +77,7 @@ export function PatientDetailPage() {
   const patientQuery = usePatientDetail(patientId || null);
   const { data: patient } = patientQuery;
   const { data: visits = [] } = usePatientAppointments(patientId || null);
+  const { data: bookings = [] } = usePatientBookings(patientId || null);
   const { data: consultations = [] } = usePatientConsultations(patientId || null);
   const { data: prescriptions = [] } = usePatientPrescriptions(patientId || null);
   const database = getDatabase();
@@ -145,6 +147,10 @@ export function PatientDetailPage() {
     });
   }, [labOrders, labSearch, labStatusFilter, database]);
   const consultationAppointmentIds = new Set(consultations.map((consultation) => consultation.appointmentId));
+  const consultationBookings = useMemo(
+    () => bookings.filter((booking) => booking.status !== 'cancelled'),
+    [bookings],
+  );
   const openedFromQr = searchParams.get('source') === 'qr';
   const scannedInventoryCode = extractInventoryItemQrCode(inventoryUsageForm.watch('scannedCode'));
   const scannedInventoryItem = database.inventoryItems.find((item) => item.qrCode === scannedInventoryCode) ?? null;
@@ -368,6 +374,9 @@ export function PatientDetailPage() {
           <Card>
             <CardTitle>Visit timeline</CardTitle>
             <div className="mt-5 space-y-4">
+              {visits.length === 0 && consultationBookings.length === 0 ? (
+                <p className="text-sm text-slate-500">No consultations have been logged through appointments or bookings yet.</p>
+              ) : null}
               {visits.map((visit) => (
                 <div key={visit.id} className="rounded-3xl bg-slate-50 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -377,6 +386,15 @@ export function PatientDetailPage() {
                     </Badge>
                   </div>
                   <p className="mt-1 text-sm text-slate-500">{visit.reason}</p>
+                </div>
+              ))}
+              {consultationBookings.map((booking) => (
+                <div key={booking.id} className="rounded-3xl border border-sky-100 bg-sky-50/60 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="font-medium text-slate-950">{formatDateTimeLabel(`${booking.preferredDate}T${booking.preferredTime}`)}</p>
+                    <Badge intent="info">Booking {booking.status.replace('_', ' ')}</Badge>
+                  </div>
+                  <p className="mt-1 text-sm text-slate-500">{booking.intakeNotes || 'General consultation booking request.'}</p>
                 </div>
               ))}
             </div>
