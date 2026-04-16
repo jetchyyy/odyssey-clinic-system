@@ -292,7 +292,8 @@ function isMissingAccessRoleTableError(error: unknown) {
   const message = (details.message ?? "").toLowerCase();
   return (
     details.code === "42P01" &&
-    (message.includes("access_roles") || message.includes("profile_access_roles"))
+    (message.includes("access_roles") ||
+      message.includes("profile_access_roles"))
   );
 }
 
@@ -843,9 +844,8 @@ function mapSpecialistScheduleRowsToAvailability(
 
     return recurrence.flatMap((dayOfWeek) =>
       slotTemplate
-        .filter(
-          (slot): slot is { start: string; end: string } =>
-            Boolean(slot.start && slot.end),
+        .filter((slot): slot is { start: string; end: string } =>
+          Boolean(slot.start && slot.end),
         )
         .map((slot) => ({
           id: `${row.id}:${dayOfWeek}:${slot.start}`,
@@ -901,7 +901,10 @@ export async function listPatientsLiveOrDemo() {
       .select("*")
       .is("deleted_at", null)
       .order("created_at", { ascending: false }),
-    client.from("appointments").select("patient_id,status").is("deleted_at", null),
+    client
+      .from("appointments")
+      .select("patient_id,status")
+      .is("deleted_at", null),
     client.from("bookings").select("patient_id,status").is("deleted_at", null),
   ]);
 
@@ -919,13 +922,30 @@ export async function listPatientsLiveOrDemo() {
   }
 
   const patientIdsWithAppointment = new Set(
-    ((appointmentResult.data ?? []) as Array<{ patient_id: string | null; status: string | null }>)
-      .filter((appointment) => Boolean(appointment.patient_id) && hasConsultationAppointment(appointment.status))
+    (
+      (appointmentResult.data ?? []) as Array<{
+        patient_id: string | null;
+        status: string | null;
+      }>
+    )
+      .filter(
+        (appointment) =>
+          Boolean(appointment.patient_id) &&
+          hasConsultationAppointment(appointment.status),
+      )
       .map((appointment) => appointment.patient_id as string),
   );
   const patientIdsWithBooking = new Set(
-    ((bookingResult.data ?? []) as Array<{ patient_id: string | null; status: string | null }>)
-      .filter((booking) => Boolean(booking.patient_id) && hasConsultationBooking(booking.status))
+    (
+      (bookingResult.data ?? []) as Array<{
+        patient_id: string | null;
+        status: string | null;
+      }>
+    )
+      .filter(
+        (booking) =>
+          Boolean(booking.patient_id) && hasConsultationBooking(booking.status),
+      )
       .map((booking) => booking.patient_id as string),
   );
 
@@ -957,7 +977,9 @@ export async function createPatientLiveOrDemo(
     qr_code: input.qrCode || generatePatientQrCode(),
     intake_source: input.intakeSource,
     visit_status: input.visitStatus,
-    ...(input.lastClinicVisitAt !== undefined ? { last_clinic_visit_at: input.lastClinicVisitAt } : {}),
+    ...(input.lastClinicVisitAt !== undefined
+      ? { last_clinic_visit_at: input.lastClinicVisitAt }
+      : {}),
     first_name: input.firstName,
     last_name: input.lastName,
     sex: input.sex,
@@ -999,7 +1021,9 @@ export async function updatePatientLiveOrDemo(
     qr_code: input.qrCode || generatePatientQrCode(),
     intake_source: input.intakeSource,
     visit_status: input.visitStatus,
-    ...(input.lastClinicVisitAt !== undefined ? { last_clinic_visit_at: input.lastClinicVisitAt } : {}),
+    ...(input.lastClinicVisitAt !== undefined
+      ? { last_clinic_visit_at: input.lastClinicVisitAt }
+      : {}),
     first_name: input.firstName,
     last_name: input.lastName,
     sex: input.sex,
@@ -1090,8 +1114,8 @@ export async function listBookingsByPatientIdLiveOrDemo(
   patientId: string,
 ): Promise<Booking[]> {
   if (!isSupabaseConfigured) {
-    return getDatabase().bookings
-      .filter((booking) => booking.patientId === patientId)
+    return getDatabase()
+      .bookings.filter((booking) => booking.patientId === patientId)
       .sort((left, right) => {
         const leftDateTime = `${left.preferredDate}T${left.preferredTime}`;
         const rightDateTime = `${right.preferredDate}T${right.preferredTime}`;
@@ -1117,8 +1141,8 @@ export async function listBookingsByPatientIdLiveOrDemo(
 
 export async function listBookingsLiveOrDemo(): Promise<Booking[]> {
   if (!isSupabaseConfigured) {
-    return getDatabase().bookings
-      .slice()
+    return getDatabase()
+      .bookings.slice()
       .sort((left, right) => {
         const leftDateTime = `${left.preferredDate}T${left.preferredTime}`;
         const rightDateTime = `${right.preferredDate}T${right.preferredTime}`;
@@ -1143,8 +1167,8 @@ export async function listBookingsLiveOrDemo(): Promise<Booking[]> {
 
 export async function listInvoicesLiveOrDemo(): Promise<Invoice[]> {
   if (!isSupabaseConfigured) {
-    return getDatabase().invoices
-      .slice()
+    return getDatabase()
+      .invoices.slice()
       .sort((left, right) => {
         if (left.createdAt === right.createdAt) {
           return right.invoiceNumber.localeCompare(left.invoiceNumber);
@@ -1165,24 +1189,26 @@ export async function listInvoicesLiveOrDemo(): Promise<Invoice[]> {
     throw error;
   }
 
-  return ((data ?? []) as Array<{
-    id: string;
-    patient_id: string;
-    appointment_id: string | null;
-    invoice_number: string;
-    payment_status: string | null;
-    subtotal: number;
-    total: number;
-    created_at: string;
-    updated_at: string;
-    deleted_at: string | null;
-  }>).map(mapInvoiceRow);
+  return (
+    (data ?? []) as Array<{
+      id: string;
+      patient_id: string;
+      appointment_id: string | null;
+      invoice_number: string;
+      payment_status: string | null;
+      subtotal: number;
+      total: number;
+      created_at: string;
+      updated_at: string;
+      deleted_at: string | null;
+    }>
+  ).map(mapInvoiceRow);
 }
 
 export async function listInvoiceItemsLiveOrDemo(): Promise<InvoiceItem[]> {
   if (!isSupabaseConfigured) {
-    return getDatabase().invoiceItems
-      .slice()
+    return getDatabase()
+      .invoiceItems.slice()
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
   }
 
@@ -1196,21 +1222,25 @@ export async function listInvoiceItemsLiveOrDemo(): Promise<InvoiceItem[]> {
     throw error;
   }
 
-  return ((data ?? []) as Array<{
-    id: string;
-    invoice_id: string;
-    description: string;
-    quantity: number;
-    unit_price: number;
-    category: string | null;
-    created_at: string;
-    updated_at: string;
-  }>).map(mapInvoiceItemRow);
+  return (
+    (data ?? []) as Array<{
+      id: string;
+      invoice_id: string;
+      description: string;
+      quantity: number;
+      unit_price: number;
+      category: string | null;
+      created_at: string;
+      updated_at: string;
+    }>
+  ).map(mapInvoiceItemRow);
 }
 
 export async function createInvoiceLiveOrDemo(
   invoice: Omit<Invoice, "id" | "createdAt" | "updatedAt">,
-  items: Array<Omit<InvoiceItem, "id" | "createdAt" | "updatedAt" | "invoiceId">>,
+  items: Array<
+    Omit<InvoiceItem, "id" | "createdAt" | "updatedAt" | "invoiceId">
+  >,
 ) {
   if (!isSupabaseConfigured) {
     const { createInvoice } = await import("./local-db");
@@ -1237,18 +1267,20 @@ export async function createInvoiceLiveOrDemo(
     throw error;
   }
 
-  const createdInvoice = mapInvoiceRow(data as {
-    id: string;
-    patient_id: string;
-    appointment_id: string | null;
-    invoice_number: string;
-    payment_status: string | null;
-    subtotal: number;
-    total: number;
-    created_at: string;
-    updated_at: string;
-    deleted_at: string | null;
-  });
+  const createdInvoice = mapInvoiceRow(
+    data as {
+      id: string;
+      patient_id: string;
+      appointment_id: string | null;
+      invoice_number: string;
+      payment_status: string | null;
+      subtotal: number;
+      total: number;
+      created_at: string;
+      updated_at: string;
+      deleted_at: string | null;
+    },
+  );
 
   if (items.length > 0) {
     const { error: itemError } = await client.from("invoice_items").insert(
@@ -1357,18 +1389,20 @@ export async function updateInvoiceLiveOrDemo(
     }
   }
 
-  return mapInvoiceRow(data as {
-    id: string;
-    patient_id: string;
-    appointment_id: string | null;
-    invoice_number: string;
-    payment_status: string | null;
-    subtotal: number;
-    total: number;
-    created_at: string;
-    updated_at: string;
-    deleted_at: string | null;
-  });
+  return mapInvoiceRow(
+    data as {
+      id: string;
+      patient_id: string;
+      appointment_id: string | null;
+      invoice_number: string;
+      payment_status: string | null;
+      subtotal: number;
+      total: number;
+      created_at: string;
+      updated_at: string;
+      deleted_at: string | null;
+    },
+  );
 }
 
 export async function deleteInvoiceLiveOrDemo(invoiceId: string) {
@@ -1394,36 +1428,35 @@ export async function getLatestInvoiceByPatientIdLiveOrDemo(
   }
 
   if (!isSupabaseConfigured) {
-    let invoices = getDatabase().invoices
-      .filter((invoice) => invoice.patientId === patientId);
-    
+    let invoices = getDatabase().invoices.filter(
+      (invoice) => invoice.patientId === patientId,
+    );
+
     // If appointmentId is provided, filter to that specific appointment
     if (appointmentId) {
-      invoices = invoices.filter((invoice) => invoice.appointmentId === appointmentId);
+      invoices = invoices.filter(
+        (invoice) => invoice.appointmentId === appointmentId,
+      );
     }
-    
-    const latest = invoices
-      .sort((left, right) => {
-        if (left.createdAt === right.createdAt) {
-          return right.invoiceNumber.localeCompare(left.invoiceNumber);
-        }
-        return right.createdAt.localeCompare(left.createdAt);
-      })[0];
+
+    const latest = invoices.sort((left, right) => {
+      if (left.createdAt === right.createdAt) {
+        return right.invoiceNumber.localeCompare(left.invoiceNumber);
+      }
+      return right.createdAt.localeCompare(left.createdAt);
+    })[0];
 
     return latest ?? null;
   }
 
   const client = requireSupabase();
-  let query = client
-    .from("invoices")
-    .select("*")
-    .eq("patient_id", patientId);
-  
+  let query = client.from("invoices").select("*").eq("patient_id", patientId);
+
   // If appointmentId is provided, filter to that specific appointment
   if (appointmentId) {
     query = query.eq("appointment_id", appointmentId);
   }
-  
+
   const { data, error } = await query
     .order("created_at", { ascending: false })
     .order("invoice_number", { ascending: false })
@@ -1573,7 +1606,8 @@ export async function createAppointmentLiveOrDemo(
     notes: input.notes,
     teleconsultation_platform: input.teleconsultationPlatform ?? null,
     teleconsultation_url: input.teleconsultationUrl ?? null,
-    teleconsultation_access_instructions: input.teleconsultationAccessInstructions ?? null,
+    teleconsultation_access_instructions:
+      input.teleconsultationAccessInstructions ?? null,
     consultation_id: input.consultationId ?? null,
     completed_by: input.completedBy ?? null,
     completed_at: input.completedAt ?? null,
@@ -1734,7 +1768,10 @@ export async function getClinicSettingsLiveOrDemo() {
 
 export async function getBookableServicesLiveOrDemo() {
   if (!isSupabaseConfigured) {
-    return getDatabase().services.filter((service) => service.isBookable);
+    return getDatabase().services.filter(
+      (service) =>
+        service.isBookable && service.name === "General Consultation",
+    );
   }
 
   const client = requireSupabase();
@@ -1742,6 +1779,7 @@ export async function getBookableServicesLiveOrDemo() {
     .from("services")
     .select("*")
     .eq("is_bookable", true)
+    .ilike("name", "%general consultation%")
     .is("deleted_at", null)
     .order("name");
 
@@ -1824,7 +1862,12 @@ export async function updateServiceLiveOrDemo(
     delivery_mode: input.deliveryMode,
   };
 
-  const { data, error } = await client.from("services").update(payload as never).eq("id", id).select("*").single();
+  const { data, error } = await client
+    .from("services")
+    .update(payload as never)
+    .eq("id", id)
+    .select("*")
+    .single();
   if (error) {
     throw error;
   }
@@ -1840,7 +1883,10 @@ export async function deleteServiceLiveOrDemo(id: string) {
   }
 
   const client = requireSupabase();
-  const { error } = await client.from("services").update({ deleted_at: new Date().toISOString() } as never).eq("id", id);
+  const { error } = await client
+    .from("services")
+    .update({ deleted_at: new Date().toISOString() } as never)
+    .eq("id", id);
   if (error) {
     throw error;
   }
@@ -1901,10 +1947,15 @@ export async function updateSpecialtyLiveOrDemo(
   }
 
   const client = requireSupabase();
-  const { data, error } = await client.from("specialties").update({
-    name: input.name,
-    description: input.description,
-  } as never).eq("id", id).select("*").single();
+  const { data, error } = await client
+    .from("specialties")
+    .update({
+      name: input.name,
+      description: input.description,
+    } as never)
+    .eq("id", id)
+    .select("*")
+    .single();
   if (error) {
     throw error;
   }
@@ -1920,7 +1971,10 @@ export async function deleteSpecialtyLiveOrDemo(id: string) {
   }
 
   const client = requireSupabase();
-  const { error } = await client.from("specialties").update({ deleted_at: new Date().toISOString() } as never).eq("id", id);
+  const { error } = await client
+    .from("specialties")
+    .update({ deleted_at: new Date().toISOString() } as never)
+    .eq("id", id);
   if (error) {
     throw error;
   }
@@ -1985,6 +2039,88 @@ export async function getDoctorDirectoryLiveOrDemo(): Promise<
   }));
 }
 
+export async function getGeneralistDirectoryLiveOrDemo(): Promise<
+  DoctorDirectoryItem[]
+> {
+  if (!isSupabaseConfigured) {
+    const database = getDatabase();
+    return database.users
+      .filter((user) => user.role === "doctor" || user.role === "specialist")
+      .map((user) => ({
+        id: user.id,
+        profileId: user.id,
+        fullName: user.fullName,
+        specialtyId: user.specialtyId ?? null,
+        specialtyName:
+          database.specialties.find(
+            (specialty) => specialty.id === user.specialtyId,
+          )?.name ?? null,
+        consultationFee: 0,
+        followUpFee: 0,
+      }));
+  }
+
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from("doctors")
+    .select(
+      `
+    id,
+    profile_id,
+    specialty_id,
+    consultation_fee,
+    follow_up_fee,
+    profiles!doctors_profile_id_fkey(
+      full_name,
+      role
+    ),
+    specialties(name)
+  `,
+    )
+    .is("deleted_at", null)
+    .order("created_at");
+  if (error) {
+    throw error;
+  }
+
+  return (
+    (
+      (data ?? []) as Array<{
+        id: string;
+        profile_id: string;
+        specialty_id: string | null;
+        consultation_fee: number;
+        follow_up_fee: number;
+        profiles:
+          | { full_name: string; role: string }
+          | { full_name: string; role: string }[];
+        specialties: { name: string } | { name: string }[] | null;
+      }>
+    )
+      // ✅ FILTER HERE
+      .filter((row) => {
+        const profile = Array.isArray(row.profiles)
+          ? row.profiles[0]
+          : row.profiles;
+
+        return profile?.role === "doctor";
+      })
+      .map((row) => ({
+        id: row.id,
+        profileId: row.profile_id,
+        fullName: Array.isArray(row.profiles)
+          ? (row.profiles[0]?.full_name ?? "Doctor")
+          : row.profiles.full_name,
+        specialtyId: row.specialty_id,
+        specialtyName: Array.isArray(row.specialties)
+          ? (row.specialties[0]?.name ?? null)
+          : (row.specialties?.name ?? null),
+        consultationFee: Number(row.consultation_fee ?? 0),
+        followUpFee: Number(row.follow_up_fee ?? 0),
+      }))
+  );
+}
+
 export async function getCurrentDoctor(userId: string) {
   if (!isSupabaseConfigured) {
     const user = getDatabase().users.find(
@@ -2030,10 +2166,10 @@ export async function ensureDoctorForUser(user: User) {
   );
   const fallbackProfile = await getCurrentProfile(user.id);
   if (
-    metadataRole !== "doctor"
-    && metadataRole !== "specialist"
-    && fallbackProfile?.role !== "doctor"
-    && fallbackProfile?.role !== "specialist"
+    metadataRole !== "doctor" &&
+    metadataRole !== "specialist" &&
+    fallbackProfile?.role !== "doctor" &&
+    fallbackProfile?.role !== "specialist"
   ) {
     return null;
   }
@@ -2214,19 +2350,21 @@ export async function saveSpecialistAvailabilityForProfileLiveOrDemo(
     return [];
   }
 
-  const payload = Array.from(groupedByDay.entries()).map(([dayOfWeek, slots]) => ({
-    specialist_id: doctor.id,
-    recurrence: [mapJsDayToSpecialistRecurrenceDay(dayOfWeek)],
-    slot_template: slots
-      .sort((left, right) => left.startTime.localeCompare(right.startTime))
-      .map((slot) => ({
-        start: slot.startTime,
-        end: slot.endTime,
-      })),
-    is_active: true,
-    valid_from: new Date().toISOString().slice(0, 10),
-    practice_location: {},
-  }));
+  const payload = Array.from(groupedByDay.entries()).map(
+    ([dayOfWeek, slots]) => ({
+      specialist_id: doctor.id,
+      recurrence: [mapJsDayToSpecialistRecurrenceDay(dayOfWeek)],
+      slot_template: slots
+        .sort((left, right) => left.startTime.localeCompare(right.startTime))
+        .map((slot) => ({
+          start: slot.startTime,
+          end: slot.endTime,
+        })),
+      is_active: true,
+      valid_from: new Date().toISOString().slice(0, 10),
+      practice_location: {},
+    }),
+  );
 
   const { data, error } = await client
     .from("specialist_schedules")
@@ -2309,7 +2447,9 @@ export async function getCurrentProfile(userId: string) {
   }
 
   const accessRoleMap = await getAccessRoleMapForProfiles([profileRow.id]);
-  return mapProfile(profileRow, { accessRole: accessRoleMap.get(profileRow.id) ?? null });
+  return mapProfile(profileRow, {
+    accessRole: accessRoleMap.get(profileRow.id) ?? null,
+  });
 }
 
 export async function ensureProfileForUser(user: User) {
@@ -2735,29 +2875,31 @@ export async function markBookingPaidAndCreateInvoiceLiveOrDemo(
           preferredTime: booking.preferred_time,
           fallbackIso: booking.created_at,
         });
-        const appointmentPayload: Database["public"]["Tables"]["appointments"]["Insert"] = {
-          patient_id: booking.patient_id,
-          doctor_id: booking.doctor_id ?? null,
-          specialty_id: null,
-          service_id: booking.service_id,
-          booking_id: booking.id,
-          scheduled_at: scheduledAt,
-          status: "scheduled",
-          source: "internal",
-          reason:
-            booking.fee_type === "follow_up"
-              ? "Follow-up Fee"
-              : booking.fee_type === "consultation"
-                ? "Consultation Fee"
-                : "Medical Service Fee",
-          notes: booking.intake_notes,
-        };
+        const appointmentPayload: Database["public"]["Tables"]["appointments"]["Insert"] =
+          {
+            patient_id: booking.patient_id,
+            doctor_id: booking.doctor_id ?? null,
+            specialty_id: null,
+            service_id: booking.service_id,
+            booking_id: booking.id,
+            scheduled_at: scheduledAt,
+            status: "scheduled",
+            source: "internal",
+            reason:
+              booking.fee_type === "follow_up"
+                ? "Follow-up Fee"
+                : booking.fee_type === "consultation"
+                  ? "Consultation Fee"
+                  : "Medical Service Fee",
+            notes: booking.intake_notes,
+          };
 
-        const { data: createdAppointmentRow, error: appointmentError } = await client
-          .from("appointments")
-          .insert(appointmentPayload as never)
-          .select("*")
-          .single();
+        const { data: createdAppointmentRow, error: appointmentError } =
+          await client
+            .from("appointments")
+            .insert(appointmentPayload as never)
+            .select("*")
+            .single();
         if (appointmentError) {
           throw appointmentError;
         }
@@ -2804,7 +2946,10 @@ export async function markBookingPaidAndCreateInvoiceLiveOrDemo(
           paymentStatus: booking.payment_status,
           appointmentId: null,
         });
-        await client.from("appointments").delete().eq("id", createdAppointmentId);
+        await client
+          .from("appointments")
+          .delete()
+          .eq("id", createdAppointmentId);
       }
 
       throw error;
@@ -2825,7 +2970,7 @@ export async function markBookingPaidAndCreateInvoiceLiveOrDemo(
         booking.fee_type === "service_fee" ? "other" : "consultation";
 
       const { error: itemError } = await client.from("invoice_items").insert({
-        invoice_id: createdInvoiceId ?? invoice?.id ?? '',
+        invoice_id: createdInvoiceId ?? invoice?.id ?? "",
         description: lineDescription,
         quantity: 1,
         unit_price: booking.fee_amount,
@@ -2837,14 +2982,20 @@ export async function markBookingPaidAndCreateInvoiceLiveOrDemo(
       }
     } catch (error) {
       if (createdInvoiceId) {
-        await client.from("invoice_items").delete().eq("invoice_id", createdInvoiceId);
+        await client
+          .from("invoice_items")
+          .delete()
+          .eq("invoice_id", createdInvoiceId);
         await client.from("invoices").delete().eq("id", createdInvoiceId);
         await updateBookingPaymentStatusWithOptionalAppointmentLink(client, {
           bookingId: booking.id,
           paymentStatus: booking.payment_status,
           appointmentId: null,
         });
-        await client.from("appointments").delete().eq("id", createdAppointmentId ?? '');
+        await client
+          .from("appointments")
+          .delete()
+          .eq("id", createdAppointmentId ?? "");
       }
 
       throw error;
@@ -2899,8 +3050,15 @@ async function getAccessRoleMapForProfiles(profileIds: string[]) {
     throw assignmentError;
   }
 
-  const typedAssignments = (assignments ?? []) as Array<Pick<Database["public"]["Tables"]["profile_access_roles"]["Row"], "profile_id" | "access_role_id">>;
-  const roleIds = Array.from(new Set(typedAssignments.map((assignment) => assignment.access_role_id)));
+  const typedAssignments = (assignments ?? []) as Array<
+    Pick<
+      Database["public"]["Tables"]["profile_access_roles"]["Row"],
+      "profile_id" | "access_role_id"
+    >
+  >;
+  const roleIds = Array.from(
+    new Set(typedAssignments.map((assignment) => assignment.access_role_id)),
+  );
 
   if (roleIds.length === 0) {
     return nextMap;
@@ -2919,7 +3077,9 @@ async function getAccessRoleMapForProfiles(profileIds: string[]) {
   }
 
   const typedRoles = (roles ?? []) as AccessRoleRow[];
-  const rolesById = new Map(typedRoles.map((role) => [role.id, mapAccessRole(role)]));
+  const rolesById = new Map(
+    typedRoles.map((role) => [role.id, mapAccessRole(role)]),
+  );
   for (const assignment of typedAssignments) {
     const accessRole = rolesById.get(assignment.access_role_id);
     if (accessRole) {
@@ -2953,7 +3113,10 @@ export async function listAccessRolesLiveOrDemo() {
 }
 
 export async function createAccessRoleLiveOrDemo(
-  input: Omit<AccessRoleTemplate, "id" | "createdAt" | "updatedAt" | "isSystem">,
+  input: Omit<
+    AccessRoleTemplate,
+    "id" | "createdAt" | "updatedAt" | "isSystem"
+  >,
 ) {
   if (!isSupabaseConfigured) {
     return createDemoAccessRole(input);
@@ -2980,7 +3143,10 @@ export async function createAccessRoleLiveOrDemo(
 
 export async function updateAccessRoleLiveOrDemo(
   id: string,
-  input: Omit<AccessRoleTemplate, "id" | "createdAt" | "updatedAt" | "isSystem">,
+  input: Omit<
+    AccessRoleTemplate,
+    "id" | "createdAt" | "updatedAt" | "isSystem"
+  >,
 ) {
   if (!isSupabaseConfigured) {
     return updateDemoAccessRoleRecord(id, input);
@@ -2997,7 +3163,10 @@ export async function updateAccessRoleLiveOrDemo(
     throw existingRoleError;
   }
 
-  const typedExistingRole = (existingRole ?? null) as Pick<AccessRoleRow, "id" | "is_system"> | null;
+  const typedExistingRole = (existingRole ?? null) as Pick<
+    AccessRoleRow,
+    "id" | "is_system"
+  > | null;
   if (!typedExistingRole) {
     throw new Error("Access role not found.");
   }
@@ -3040,7 +3209,10 @@ export async function deleteAccessRoleLiveOrDemo(id: string) {
     throw existingRoleError;
   }
 
-  const typedExistingRole = (existingRole ?? null) as Pick<AccessRoleRow, "id" | "is_system"> | null;
+  const typedExistingRole = (existingRole ?? null) as Pick<
+    AccessRoleRow,
+    "id" | "is_system"
+  > | null;
   if (!typedExistingRole) {
     return;
   }
@@ -3070,15 +3242,13 @@ export async function assignAccessRoleToProfileLiveOrDemo(input: {
   }
 
   const client = requireSupabase() as any;
-  const { error } = await client
-    .from("profile_access_roles")
-    .upsert(
-      {
-        profile_id: input.userId,
-        access_role_id: input.accessRoleId,
-      } as Database["public"]["Tables"]["profile_access_roles"]["Insert"],
-      { onConflict: "profile_id" },
-    );
+  const { error } = await client.from("profile_access_roles").upsert(
+    {
+      profile_id: input.userId,
+      access_role_id: input.accessRoleId,
+    } as Database["public"]["Tables"]["profile_access_roles"]["Insert"],
+    { onConflict: "profile_id" },
+  );
 
   if (error) {
     throw error;
@@ -3099,8 +3269,13 @@ export async function createAdminUserLiveOrDemo(input: AdminCreateUserInput) {
       title: null,
       specialtyId: null,
       consultationFee:
-        input.role === "doctor" || input.role === "specialist" ? (input.consultationFee ?? 0) : null,
-      followUpFee: input.role === "doctor" || input.role === "specialist" ? (input.followUpFee ?? 0) : null,
+        input.role === "doctor" || input.role === "specialist"
+          ? (input.consultationFee ?? 0)
+          : null,
+      followUpFee:
+        input.role === "doctor" || input.role === "specialist"
+          ? (input.followUpFee ?? 0)
+          : null,
     });
   }
 
@@ -3186,8 +3361,13 @@ export async function updateAdminUserLiveOrDemo(
       title: null,
       specialtyId: null,
       consultationFee:
-        input.role === "doctor" || input.role === "specialist" ? (input.consultationFee ?? 0) : null,
-      followUpFee: input.role === "doctor" || input.role === "specialist" ? (input.followUpFee ?? 0) : null,
+        input.role === "doctor" || input.role === "specialist"
+          ? (input.consultationFee ?? 0)
+          : null,
+      followUpFee:
+        input.role === "doctor" || input.role === "specialist"
+          ? (input.followUpFee ?? 0)
+          : null,
     });
 
     if (!updatedUser) {
@@ -3252,49 +3432,51 @@ export async function deleteAdminUserLiveOrDemo(
   );
 }
 
-  export async function updateCurrentStaffProfileLiveOrDemo(
-    userId: string,
-    input: { phone?: string; title?: string | null },
-  ) {
-    if (!isSupabaseConfigured) {
-      const currentUser = getDatabase().users.find((profile) => profile.id === userId || profile.authUserId === userId);
-      if (!currentUser) {
-        throw new Error("Updated user could not be loaded.");
-      }
-
-      const updatedUser = updateUserProfileRecord(userId, {
-        ...currentUser,
-        phone: input.phone?.trim() || '',
-        title: input.title?.trim() || null,
-      });
-
-      if (!updatedUser) {
-        throw new Error("Updated user could not be loaded.");
-      }
-
-      return updatedUser;
+export async function updateCurrentStaffProfileLiveOrDemo(
+  userId: string,
+  input: { phone?: string; title?: string | null },
+) {
+  if (!isSupabaseConfigured) {
+    const currentUser = getDatabase().users.find(
+      (profile) => profile.id === userId || profile.authUserId === userId,
+    );
+    if (!currentUser) {
+      throw new Error("Updated user could not be loaded.");
     }
 
-    const client = requireSupabase();
-    const { error } = await client
-      .from("profiles")
-      .update({
-        phone: input.phone?.trim() || '',
-        title: input.title?.trim() || null,
-      } as never)
-      .eq("id", userId);
+    const updatedUser = updateUserProfileRecord(userId, {
+      ...currentUser,
+      phone: input.phone?.trim() || "",
+      title: input.title?.trim() || null,
+    });
 
-    if (error) {
-      throw error;
+    if (!updatedUser) {
+      throw new Error("Updated user could not be loaded.");
     }
 
-    const refreshedProfile = await getCurrentProfile(userId);
-    if (!refreshedProfile) {
-      throw new Error("Updated user profile could not be loaded.");
-    }
-
-    return refreshedProfile;
+    return updatedUser;
   }
+
+  const client = requireSupabase();
+  const { error } = await client
+    .from("profiles")
+    .update({
+      phone: input.phone?.trim() || "",
+      title: input.title?.trim() || null,
+    } as never)
+    .eq("id", userId);
+
+  if (error) {
+    throw error;
+  }
+
+  const refreshedProfile = await getCurrentProfile(userId);
+  if (!refreshedProfile) {
+    throw new Error("Updated user profile could not be loaded.");
+  }
+
+  return refreshedProfile;
+}
 
 export async function updatePatientAccountLiveOrDemo(
   userId: string,
@@ -3431,15 +3613,17 @@ export async function getSupplier(): Promise<Supplier[]> {
     throw error;
   }
 
-  return ((data ?? []) as Array<{
-    id: string;
-    name: string;
-    contact_person: string;
-    phone: string;
-    email: string;
-    created_at: string;
-    updated_at: string;
-  }>).map((row) => ({
+  return (
+    (data ?? []) as Array<{
+      id: string;
+      name: string;
+      contact_person: string;
+      phone: string;
+      email: string;
+      created_at: string;
+      updated_at: string;
+    }>
+  ).map((row) => ({
     id: row.id,
     name: row.name,
     contact_person: row.contact_person,
@@ -3482,7 +3666,12 @@ export async function createSupplier(values: {
 
 export async function updateSupplier(
   id: string,
-  values: { name: string; contact_person: string; phone: string; email: string },
+  values: {
+    name: string;
+    contact_person: string;
+    phone: string;
+    email: string;
+  },
 ) {
   if (!isSupabaseConfigured) {
     const { updateSupplierRecord } = await import("./local-db");
@@ -3523,7 +3712,9 @@ export async function deleteSupplier(id: string) {
   }
 }
 
-export async function getCategories(): Promise<Array<{ id: string; name: string }>> {
+export async function getCategories(): Promise<
+  Array<{ id: string; name: string }>
+> {
   if (!isSupabaseConfigured) {
     return getDatabase().inventoryCategories.map((category) => ({
       id: category.id,
@@ -3543,7 +3734,9 @@ export async function getCategories(): Promise<Array<{ id: string; name: string 
   return (data ?? []) as Array<{ id: string; name: string }>;
 }
 
-export async function getInventoryItems(page: number): Promise<InventoryItem[]> {
+export async function getInventoryItems(
+  page: number,
+): Promise<InventoryItem[]> {
   if (!isSupabaseConfigured) {
     const { listInventoryItems } = await import("./local-db");
     return listInventoryItems();
@@ -3562,21 +3755,23 @@ export async function getInventoryItems(page: number): Promise<InventoryItem[]> 
     throw error;
   }
 
-  return ((data ?? []) as Array<{
-    id: string;
-    category_id: string;
-    supplier_id: string | null;
-    qr_code: string;
-    name: string;
-    sku: string;
-    unit: string;
-    stock_on_hand: number;
-    reorder_level: number;
-    cost_price: number | null;
-    selling_price: number | null;
-    created_at: string;
-    updated_at: string;
-  }>).map((row) => ({
+  return (
+    (data ?? []) as Array<{
+      id: string;
+      category_id: string;
+      supplier_id: string | null;
+      qr_code: string;
+      name: string;
+      sku: string;
+      unit: string;
+      stock_on_hand: number;
+      reorder_level: number;
+      cost_price: number | null;
+      selling_price: number | null;
+      created_at: string;
+      updated_at: string;
+    }>
+  ).map((row) => ({
     id: row.id,
     category_id: row.category_id,
     supplier_id: row.supplier_id,
@@ -3609,21 +3804,23 @@ export async function listInventoryItemsLiveOrDemo(): Promise<InventoryItem[]> {
     throw error;
   }
 
-  return ((data ?? []) as Array<{
-    id: string;
-    category_id: string;
-    supplier_id: string | null;
-    qr_code: string;
-    name: string;
-    sku: string;
-    unit: string;
-    stock_on_hand: number;
-    reorder_level: number;
-    cost_price: number | null;
-    selling_price: number | null;
-    created_at: string;
-    updated_at: string;
-  }>).map((row) => ({
+  return (
+    (data ?? []) as Array<{
+      id: string;
+      category_id: string;
+      supplier_id: string | null;
+      qr_code: string;
+      name: string;
+      sku: string;
+      unit: string;
+      stock_on_hand: number;
+      reorder_level: number;
+      cost_price: number | null;
+      selling_price: number | null;
+      created_at: string;
+      updated_at: string;
+    }>
+  ).map((row) => ({
     id: row.id,
     category_id: row.category_id,
     supplier_id: row.supplier_id,
@@ -3652,7 +3849,8 @@ export async function createInventoryItem(values: {
   sellingPrice: number;
 }) {
   if (!isSupabaseConfigured) {
-    const { createInventoryItem: createInventoryItemLocal } = await import("./local-db");
+    const { createInventoryItem: createInventoryItemLocal } =
+      await import("./local-db");
     return createInventoryItemLocal({
       category_id: values.categoryId,
       supplier_id: values.supplierId || null,
@@ -3774,19 +3972,21 @@ export async function listPosSalesLiveOrDemo(): Promise<PosSale[]> {
     throw error;
   }
 
-  return ((data ?? []) as Array<{
-    id: string;
-    sale_number: string;
-    patient_id: string | null;
-    cashier_id: string;
-    payment_method: string | null;
-    payment_reference: string | null;
-    payment_notes: string | null;
-    subtotal: number;
-    total: number;
-    created_at: string;
-    updated_at: string;
-  }>).map(mapPosSaleRow);
+  return (
+    (data ?? []) as Array<{
+      id: string;
+      sale_number: string;
+      patient_id: string | null;
+      cashier_id: string;
+      payment_method: string | null;
+      payment_reference: string | null;
+      payment_notes: string | null;
+      subtotal: number;
+      total: number;
+      created_at: string;
+      updated_at: string;
+    }>
+  ).map(mapPosSaleRow);
 }
 
 export async function listPosSaleItemsLiveOrDemo(): Promise<PosSaleItem[]> {
@@ -3805,19 +4005,21 @@ export async function listPosSaleItemsLiveOrDemo(): Promise<PosSaleItem[]> {
     throw error;
   }
 
-  return ((data ?? []) as Array<{
-    id: string;
-    sale_id: string;
-    inventory_item_id: string;
-    item_name: string;
-    item_sku: string;
-    item_unit: string;
-    quantity: number;
-    unit_price: number;
-    line_total: number;
-    created_at: string;
-    updated_at: string;
-  }>).map(mapPosSaleItemRow);
+  return (
+    (data ?? []) as Array<{
+      id: string;
+      sale_id: string;
+      inventory_item_id: string;
+      item_name: string;
+      item_sku: string;
+      item_unit: string;
+      quantity: number;
+      unit_price: number;
+      line_total: number;
+      created_at: string;
+      updated_at: string;
+    }>
+  ).map(mapPosSaleItemRow);
 }
 
 export async function checkoutPosSaleLiveOrDemo(input: {
