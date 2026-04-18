@@ -41,6 +41,7 @@ import { OdcPage } from "../features/shared/odc-page";
 import { TeleconsultRoomPage } from "../features/teleconsult/teleconsult-room-page";
 import { ModuleGate, PermissionGate, ProtectedRoute } from "./guards";
 import { SystemAvailabilityGate } from "./system-availability-gate";
+import { InventoryLogsPage } from "../features/inventory/inventory-logs-page";
 
 export const router = createBrowserRouter([
   {
@@ -318,6 +319,10 @@ export const router = createBrowserRouter([
                   {
                     element: <PermissionGate permission="inventory.view" />,
                     children: [{ path: "inventory", element: <InventoryPage /> }],
+                  },
+                  {
+                    element:<PermissionGate permission="inventory.view"/>,
+                    children:[{path: "inventory-logs", element:<InventoryLogsPage/>}]
                   },
                 ],
               },
