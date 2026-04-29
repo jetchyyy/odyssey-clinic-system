@@ -89,7 +89,9 @@ export function InventoryLogsPage() {
                   <tr key={log.id}>
                     <td className="px-6 py-4">{log.recordedBy}</td>
                     <td className="px-6 py-4">
-                      {log.patientId || "Walk-in customer"}
+                      {log.patientId && !log.patientId.includes("undefined")
+                        ? log.patientId
+                        : "Walk-in Customer"}
                     </td>
                     <td className="px-6 py-4">{log.appointmentId}</td>
                     <td className="px-6 py-4">{log.itemId}</td>
