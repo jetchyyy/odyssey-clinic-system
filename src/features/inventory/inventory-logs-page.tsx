@@ -1,35 +1,10 @@
-import { useDeferredValue, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { ClipboardList, Search } from 'lucide-react';
+import { ClipboardList } from "lucide-react";
 
-import { Badge } from '../../components/ui/badge';
-import { Button } from '../../components/ui/button';
-import { queryKeys } from '../../lib/query-keys';
-import { getInventoryLogs, getInventoryLogsCount } from '../../lib/supabase-clinic';
-import { formatDateTimeLabel } from '../../lib/utils';
-import type { InventoryUsageLog } from '../../types/domain';
-
-function formatLogTimestamp(value: string | null | undefined) {
-  if (!value) {
-    return '—';
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return '—';
-  }
-
-  return formatDateTimeLabel(value);
-}
-
-function formatPatientName(value: string | null | undefined) {
-  const normalized = value?.trim();
-  if (!normalized || normalized.toLowerCase().includes('undefined')) {
-    return 'Walk-in Customer';
-  }
-
-  return normalized;
-}
+import { Badge } from "../../components/ui/badge";
+import type { InventoryUsageLog } from "../../types/domain";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "../../lib/query-keys";
+import { getInventoryLogs } from "../../lib/supabase-clinic";
 
 export function InventoryLogsPage() {
   const INVENTORY_LOGS_PAGE_SIZE = 10;

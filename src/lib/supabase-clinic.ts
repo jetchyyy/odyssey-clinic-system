@@ -1931,7 +1931,7 @@ export async function updateClinicSettingsLiveOrDemo(
     .from("clinic_settings")
     .select("id")
     .limit(1)
-    .maybeSingle();
+    .maybeSingle<{ id: string }>();
 
   if (fetchError) throw fetchError;
   if (!existing) throw new Error("Clinic settings row not found in Supabase.");
@@ -1964,12 +1964,9 @@ export async function updateClinicSettingsLiveOrDemo(
   if (input.operatingHours !== undefined)
     payload.operating_hours = input.operatingHours;
 
-  type ClinicSettingsUpdate =
-    Database["public"]["Tables"]["clinic_settings"]["Update"];
-
   const { data, error } = await client
     .from("clinic_settings")
-    .update(payload as ClinicSettingsUpdate)
+    .update(payload as never)
     .eq("id", existing.id)
     .select("*")
     .single();
