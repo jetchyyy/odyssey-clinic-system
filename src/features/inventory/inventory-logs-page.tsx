@@ -1,10 +1,13 @@
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, Search } from "lucide-react";
+import { useDeferredValue, useMemo, useState } from "react";
 
 import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
+import { formatDateTimeLabel } from "../../lib/utils";
 import type { InventoryUsageLog } from "../../types/domain";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "../../lib/query-keys";
-import { getInventoryLogs } from "../../lib/supabase-clinic";
+import { getInventoryLogs, getInventoryLogsCount } from "../../lib/supabase-clinic";
 
 export function InventoryLogsPage() {
   const INVENTORY_LOGS_PAGE_SIZE = 10;
@@ -34,7 +37,7 @@ export function InventoryLogsPage() {
     return logs.filter((log) =>
       [
         log.recordedBy,
-        formatPatientName(log.patientId),
+        log.patientId,
         log.appointmentId ?? '',
         log.itemId,
         log.notes,
@@ -116,9 +119,9 @@ export function InventoryLogsPage() {
                 ) : (
                   filteredLogs.map((log) => (
                     <tr className="transition-colors hover:bg-slate-50" key={log.id}>
-                      <td className="whitespace-nowrap px-4 py-3 align-top text-xs text-slate-600">{formatLogTimestamp(log.createdAt)}</td>
+                      <td className="whitespace-nowrap px-4 py-3 align-top text-xs text-slate-600">{formatDateTimeLabel(log.createdAt)}</td>
                       <td className="px-4 py-3 align-top font-mono text-xs text-slate-700">{log.recordedBy || '—'}</td>
-                      <td className="px-4 py-3 align-top text-xs text-slate-700">{formatPatientName(log.patientId)}</td>
+                      <td className="px-4 py-3 align-top text-xs text-slate-700">{log.patientId}</td>
                       <td className="px-4 py-3 align-top text-xs text-slate-700">{log.appointmentId || '—'}</td>
                       <td className="px-4 py-3 align-top text-xs text-slate-700">{log.itemId || '—'}</td>
                       <td className="px-4 py-3 align-top">
