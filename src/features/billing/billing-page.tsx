@@ -974,6 +974,8 @@ export function BillingPage() {
               serviceCategory: service?.category ?? 'laboratory',
               department: 'Laboratory',
               transactionType: 'cashier_paid_service',
+              paymentStatus: 'paid',
+              receiptCode: viewedInvoice.invoiceNumber ?? null,
               status: order.status === 'released' ? 'completed' : 'pending',
               sampleStatus: order.status === 'processing' || order.status === 'ready' || order.status === 'released' ? 'processing' : 'pending',
               resultStatus: order.status === 'released' ? 'completed' : 'pending',

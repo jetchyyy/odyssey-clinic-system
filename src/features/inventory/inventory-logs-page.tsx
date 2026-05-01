@@ -1,9 +1,8 @@
-import { ClipboardList, Pencil, Trash2 } from "lucide-react";
+import { ClipboardList } from "lucide-react";
 
 import { Badge } from "../../components/ui/badge";
-import { formatDateTimeLabel } from "../../lib/utils";
 import type { InventoryUsageLog } from "../../types/domain";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "../../lib/query-keys";
 import { getInventoryLogs } from "../../lib/supabase-clinic";
 
