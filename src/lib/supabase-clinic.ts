@@ -1978,10 +1978,7 @@ export async function updateClinicSettingsLiveOrDemo(
 
 export async function getBookableServicesLiveOrDemo() {
   if (!isSupabaseConfigured) {
-    return getDatabase().services.filter(
-      (service) =>
-        service.isBookable && service.name === "General Consultation",
-    );
+    return getDatabase().services.filter((service) => service.isBookable);
   }
 
   const client = requireSupabase();
@@ -1989,7 +1986,6 @@ export async function getBookableServicesLiveOrDemo() {
     .from("services")
     .select("*")
     .eq("is_bookable", true)
-    .ilike("name", "%general consultation%")
     .is("deleted_at", null)
     .order("name");
 
@@ -4345,6 +4341,8 @@ export async function getInventoryLogs(
     .select(
       `
       id,
+      created_at,
+      updated_at,
       quantity,
       notes,
       scanned_code,
@@ -4370,6 +4368,16 @@ export async function getInventoryLogs(
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }));
+}
+
+export async function getInventoryLogsCount(): Promise<number> {
+  const client = requireSupabase();
+  const { count, error } = await client
+    .from("inventory_usage_logs")
+    .select("id", { count: "exact", head: true });
+
+  if (error) throw error;
+  return count ?? 0;
 }
 
 export async function createInventoryLogs(values: {
